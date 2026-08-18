@@ -48,3 +48,4 @@ GoogleService-Info.plist.bak
 Thumbs.db
 ios/Runner/GoogleService-Info.plist
 .flutter-plugins-dependencies
+**/ephemeral/

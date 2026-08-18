@@ -22,7 +22,6 @@ class BannerCarousel extends ConsumerStatefulWidget {
 
 class _BannerCarouselState extends ConsumerState<BannerCarousel> {
   final _pageController = PageController(viewportFraction: 0.92);
-  int _currentPage = 0;
 
   @override
   void dispose() {
@@ -80,11 +79,10 @@ class _BannerCarouselState extends ConsumerState<BannerCarousel> {
         SizedBox(
           height: 92,
           child: PageView.builder(
-            controller: _pageController,
-            itemCount: widget.banners.length,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            itemBuilder: (context, index) {
-              final banner = widget.banners[index];
+  controller: _pageController,
+  itemCount: widget.banners.length,
+  itemBuilder: (context, index) {
+    final banner = widget.banners[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: GestureDetector(

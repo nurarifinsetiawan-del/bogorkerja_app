@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/taxonomy_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/home_provider.dart';
 import '../../repository/job_repository.dart';
@@ -13,7 +12,6 @@ import '../../widgets/common/screen_view_logger.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/job/job_card.dart';
 import '../../widgets/job/job_card_shimmer.dart';
-import '../search/search_screen.dart';
 import 'widgets/banner_carousel.dart';
 import 'widgets/category_chips_row.dart';
 import 'widgets/company_grid.dart';

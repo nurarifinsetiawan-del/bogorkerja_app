@@ -1,18 +1,22 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'dart:async';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/constants/app_constants.dart';
+import 'providers/fcm_token_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
+import 'routes/route_names.dart';
 import 'services/hive_service.dart';
 import 'services/notification_service.dart';
-import 'providers/notification_provider.dart';
 import 'theme/app_theme.dart';
-import 'providers/theme_provider.dart';
-import 'routes/route_names.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,25 +28,18 @@ Future<void> main() async {
 
   await initializeDateFormatting('id_ID', null);
 
-  // Firebase & push notification: dibungkus try-catch supaya app tetap
-  // bisa jalan (tanpa fitur push) kalau google-services.json belum
-  // di-setup saat development awal, bukan crash total.
+  // Hanya init Firebase yang di-await di sini (cepat). Permission,
+  // APNS, dan FCM token TIDAK boleh menahan first frame — di iOS
+  // token APNS sering belum ada (apalagi Simulator) dan getToken()
+  // bisa gagal / menggantung, yang kelihatan seperti black screen.
   try {
-  await Firebase.initializeApp();
-
-  final analytics = FirebaseAnalytics.instance;
-
-  await analytics.setAnalyticsCollectionEnabled(true);
-  await analytics.logAppOpen();
-
-  FirebaseMessaging.onBackgroundMessage(
-    firebaseMessagingBackgroundHandler,
-  );
-
-  await NotificationService.instance.init();
-} catch (e) {
-  debugPrint('Firebase belum siap / gagal init: $e');
-}
+    await Firebase.initializeApp().timeout(const Duration(seconds: 8));
+    FirebaseMessaging.onBackgroundMessage(
+      firebaseMessagingBackgroundHandler,
+    );
+  } catch (e) {
+    debugPrint('Firebase belum siap / gagal init: $e');
+  }
 
   runApp(const ProviderScope(child: BogorKerjaApp()));
 }
@@ -55,6 +52,8 @@ class BogorKerjaApp extends ConsumerStatefulWidget {
 }
 
 class _BogorKerjaAppState extends ConsumerState<BogorKerjaApp> {
+  StreamSubscription<String>? _tokenRefreshSub;
+
   @override
   void initState() {
     super.initState();
@@ -74,12 +73,50 @@ class _BogorKerjaAppState extends ConsumerState<BogorKerjaApp> {
       ref.read(notificationFeedProvider.notifier).silentRefresh();
     };
 
+    unawaited(_initPushAndAnalytics());
+
     // Cold start: app di-tap dari notification saat kondisi TERMINATED.
     // onMessage/onMessageOpenedApp di atas TIDAK menangkap kasus ini —
     // hanya getInitialMessage() yang tahu app dibuka lewat notification.
     // Navigasi ditunda ke frame berikutnya supaya GoRouter/navigator
     // sudah pasti ter-mount (menghindari "context belum siap").
-    _handleInitialMessage();
+    unawaited(_handleInitialMessage());
+  }
+
+  Future<void> _initPushAndAnalytics() async {
+    try {
+      final analytics = FirebaseAnalytics.instance;
+      unawaited(analytics.setAnalyticsCollectionEnabled(true));
+      unawaited(analytics.logAppOpen());
+
+      await NotificationService.instance.init();
+      if (!mounted) return;
+
+      unawaited(ref.read(settingsProvider.notifier).syncInitialDevice());
+      _tokenRefreshSub = NotificationService.instance.onTokenRefresh.listen((_) {
+        unawaited(ref.read(settingsProvider.notifier).syncInitialDevice());
+      });
+      unawaited(_retryFcmRegistration());
+    } catch (e) {
+      debugPrint('Firebase/push init error: $e');
+    }
+  }
+
+  /// APNS di iOS bisa datang beberapa detik setelah permission.
+  /// Coba lagi di background; kalau tetap kosong, app tetap jalan
+  /// tanpa push (Simulator hampir selalu kasus ini).
+  Future<void> _retryFcmRegistration() async {
+    for (var i = 0; i < 5; i++) {
+      await Future<void>.delayed(Duration(seconds: 2 + i));
+      if (!mounted) return;
+
+      final token = await NotificationService.instance.getToken();
+      if (token == null) continue;
+
+      ref.invalidate(fcmTokenProvider);
+      await ref.read(settingsProvider.notifier).syncInitialDevice();
+      return;
+    }
   }
 
   Future<void> _handleInitialMessage() async {
@@ -96,6 +133,12 @@ class _BogorKerjaAppState extends ConsumerState<BogorKerjaApp> {
     } catch (e) {
       debugPrint('getInitialMessage error: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _tokenRefreshSub?.cancel();
+    super.dispose();
   }
 
   @override

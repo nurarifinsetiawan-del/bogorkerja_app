@@ -5,18 +5,13 @@ import FirebaseMessaging
 import UserNotifications
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     // Mirrors lib/main.dart's `Firebase.initializeApp()` on the native
     // side, so Firebase is ready before Flutter's own init runs.
-    // GoogleService-Info.plist must be added to the Runner target for
-    // this to succeed at runtime (see ACTION REQUIRED in the handoff
-    // notes) — FirebaseApp.configure() itself is safe to call even if
-    // the plist is temporarily missing during local iteration; it just
-    // logs a warning rather than crashing.
     FirebaseApp.configure()
 
     // Required so FirebaseMessaging can receive the APNs device token
@@ -26,8 +21,14 @@ import UserNotifications
       UNUserNotificationCenter.current().delegate = self
     }
 
-    GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Flutter 3.41 UIScene: plugins must register here, not in
+  // didFinishLaunchingWithOptions. Registering too early leaves the
+  // engine running with no attached window (black screen).
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
 
   // Bridges the raw APNs token to Firebase so `FirebaseMessaging.instance

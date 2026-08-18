@@ -1,26 +1,20 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../providers/core_providers.dart';
-import '../../providers/fcm_token_provider.dart';
-import '../../providers/settings_provider.dart';
 import '../../routes/route_names.dart';
 import '../../services/hive_service.dart';
 import '../../services/analytics_service.dart';
 import '../../theme/app_colors.dart';
 
-class SplashScreen extends ConsumerStatefulWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
@@ -43,13 +37,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _bootstrap() async {
-    // Registrasi device untuk push notification berjalan di background,
-    // TIDAK memblokir splash (kalau gagal/offline, app tetap bisa dipakai
-    // — device akan coba register lagi nanti dari Settings).
-    unawaited(_registerDeviceForPush());
-
-    // Splash minimal 1200ms supaya animasi logo terlihat, tapi tidak
-    // dibuat berlama-lama menahan user (bukan splash "gimmick").
+    // Splash hanya animasi + navigasi. Registrasi FCM/APNS diurus
+    // di BogorKerjaApp secara background supaya token yang belum
+    // siap tidak pernah menahan layar ini.
     await Future.delayed(const Duration(milliseconds: 1200));
 
     if (!mounted) return;
@@ -58,25 +48,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         HiveService.instance.settingsBox.get(AppConstants.keyOnboardingSeen) as bool? ?? false;
 
     context.goNamed(onboardingSeen ? RouteNames.home : RouteNames.onboarding);
-  }
-
-  Future<void> _registerDeviceForPush() async {
-    try {
-      final token = await ref.read(fcmTokenProvider.future);
-      if (token == null) return;
-
-      final settings = ref.read(settingsProvider);
-      await ref.read(deviceRepositoryProvider).registerDevice(
-            deviceId: settings.deviceId,
-            fcmToken: token,
-            platform: 'android',
-            cityInterest: settings.cityInterest,
-            professionInterest: settings.professionInterest,
-            notificationsEnabled: settings.notificationsEnabled,
-          );
-    } catch (_) {
-      // Silent fail — bukan alur kritikal untuk splash.
-    }
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';
 import '../services/hive_service.dart';
+import '../services/notification_service.dart';
 import 'core_providers.dart';
 import 'fcm_token_provider.dart';
 
@@ -109,17 +110,17 @@ class SettingsNotifier extends Notifier<AppSettings> {
     // device TIDAK terdaftar di backend untuk menerima push notification.
     String? fcmToken;
     try {
-      fcmToken = await ref.read(fcmTokenProvider.future);
+      fcmToken = await ref
+          .read(fcmTokenProvider.future)
+          .timeout(const Duration(seconds: 6));
     } catch (_) {
       fcmToken = null;
     }
 
     if (fcmToken == null) {
-      // Token belum/tidak tersedia (izin notifikasi ditolak, Play
-      // Services bermasalah, dll). Invalidate supaya percobaan
-      // berikutnya (mis. user toggle lagi setelah aktifkan izin di
-      // Pengaturan HP) memicu pengambilan token yang baru, bukan
-      // stuck di hasil null yang lama selamanya.
+      // Token belum/tidak tersedia (APNS iOS belum set, izin ditolak,
+      // Simulator, dll). Jangan blokir UI — invalidate supaya percobaan
+      // berikutnya (retry background / toggle Settings) ambil token baru.
       ref.invalidate(fcmTokenProvider);
       return;
     }
@@ -127,7 +128,7 @@ class SettingsNotifier extends Notifier<AppSettings> {
     await ref.read(deviceRepositoryProvider).registerDevice(
           deviceId: state.deviceId,
           fcmToken: fcmToken,
-          platform: 'android',
+          platform: NotificationService.devicePlatform,
           cityInterest: state.cityInterest,
           professionInterest: state.professionInterest,
           notificationsEnabled: state.notificationsEnabled,

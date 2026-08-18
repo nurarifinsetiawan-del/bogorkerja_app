@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -15,12 +17,17 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  bool _initialized = false;
+
   static const _channel = AndroidNotificationChannel(
     'job_alerts', // id — HARUS sama dengan yang didaftarkan di AndroidManifest kalau override
     'Info Loker',
     description: 'Notifikasi loker baru sesuai minat Anda',
     importance: Importance.high,
   );
+
+  static String get devicePlatform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
 
   /// Callback dipanggil saat notifikasi (foreground/background/tap) berisi
   /// job_id, supaya main.dart bisa navigasi ke JobDetailScreen lewat GoRouter.
@@ -32,6 +39,8 @@ class NotificationService {
   void Function()? onNewNotificationReceived;
 
   Future<void> init() async {
+    if (_initialized) return;
+
     await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
     await _localNotifications
@@ -60,6 +69,8 @@ class NotificationService {
         onJobNotificationTap?.call(int.tryParse(jobId.toString()) ?? 0);
       }
     });
+
+    _initialized = true;
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
@@ -87,9 +98,29 @@ class NotificationService {
     onNewNotificationReceived?.call();
   }
 
+  /// Returns the FCM token, or null if it is not ready yet.
+  ///
+  /// On iOS, [FirebaseMessaging.getToken] throws
+  /// `apns-token-not-set` until APNS has delivered a token (often never
+  /// on Simulator). We check APNS first and time out so callers never
+  /// hang the UI.
   Future<String?> getToken() async {
     try {
-      return await _messaging.getToken();
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final apnsToken = await _messaging
+            .getAPNSToken()
+            .timeout(const Duration(seconds: 2), onTimeout: () => null);
+        if (apnsToken == null) {
+          if (kDebugMode) {
+            debugPrint('APNS token not ready yet; skipping FCM getToken');
+          }
+          return null;
+        }
+      }
+
+      return await _messaging
+          .getToken()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
     } catch (e) {
       if (kDebugMode) debugPrint('FCM getToken error: $e');
       return null;

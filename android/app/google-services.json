@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "466224203063",
+    "project_id": "bogor-kerja",
+    "storage_bucket": "bogor-kerja.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466224203063:android:a9ab03876a1319db8306b2",
+        "android_client_info": {
+          "package_name": "id.bogorkerja.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIHx-tUPdiuHydFCKwaHMry2Lz3h1LkTk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466224203063:android:22a8b4314a3c3f698306b2",
+        "android_client_info": {
+          "package_name": "id.bogorkerja.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIHx-tUPdiuHydFCKwaHMry2Lz3h1LkTk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

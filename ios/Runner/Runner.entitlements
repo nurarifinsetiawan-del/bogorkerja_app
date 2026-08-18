@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- aps-environment must be "development" while building/testing from
+	     Xcode with a development provisioning profile, and Xcode/App Store
+	     Connect automatically rewrites this to "production" at archive/
+	     export time when signed with a distribution profile. The Mac team
+	     does not need to edit this by hand. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

@@ -1,0 +1,79 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+<uses-permission
+    android:name="com.google.android.gms.permission.AD_ID"
+    tools:node="remove" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="Bogor Kerja ID"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="job_alerts" />
+
+        <!-- Matikan screen_view otomatis dari Firebase SDK. Semua layar di
+             app ini SUDAH dicatat manual (lihat AnalyticsService.logScreenView
+             & ScreenViewLogger), jadi screen_view otomatis dari SDK ini
+             cuma jadi event ganda TANPA nama layar (screen_name kosong,
+             screen_class ikut layar terakhir yang dibuka) — inilah sumber
+             baris "(belum ditetapkan)" / "(not set)" di laporan GA4. -->
+        <meta-data
+            android:name="google_analytics_automatic_screen_reporting_enabled"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
+    </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+
+        <!-- Diperlukan sejak Android 11 (package visibility) supaya
+             url_launcher bisa membuka link https/http (mis. tombol
+             "Kebijakan Privasi" di Pengaturan) di browser eksternal.
+             Tanpa ini, canLaunchUrl()/launchUrl() untuk skema https/http
+             bisa gagal diam-diam karena app tidak "melihat" browser apa
+             pun yang terpasang di perangkat. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+
+</manifest>

@@ -2,7 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- App identity -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -19,24 +20,10 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-
-	<!-- Launch / UI -->
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleDefault</string>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-
-	<!-- Flutter 3.41+ requires UIScene. Without this manifest, iOS 18
-	     launches the Dart engine (network/FCM still work) but never
-	     attaches a window — which shows up as a black screen. -->
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -58,11 +45,18 @@
 			</array>
 		</dict>
 	</dict>
-
-	<!-- Orientation: app does not lock orientation on Android either (no
-	     screenOrientation set in AndroidManifest, no SystemChrome
-	     .setPreferredOrientations call in lib/), so we mirror that here
-	     rather than restricting iOS to portrait-only. -->
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -76,50 +70,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-
-	<!-- Flutter engine flags -->
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-
-	<!-- No NSAllowsArbitraryLoads: every request in lib/ goes through
-	     ApiConstants.baseUrl = https://bogorkerja.id (HTTPS only, no
-	     localhost/dev IPs found in the audit), so default ATS is left
-	     enabled/secure. Do not add App Transport Security exceptions
-	     unless a real HTTP endpoint is confirmed later. -->
-
-	<!--
-	  Permissions NOT requested on purpose (per code audit — none of these
-	  APIs are used anywhere in lib/, and Android's manifest matches:
-	  no camera, photo library, microphone, location, contacts, calendar,
-	  or Bluetooth usage was found):
-	    - NSCameraUsageDescription
-	    - NSPhotoLibraryUsageDescription / NSPhotoLibraryAddUsageDescription
-	    - NSMicrophoneUsageDescription
-	    - NSLocationWhenInUseUsageDescription
-	    - NSContactsUsageDescription
-	    - NSCalendarsUsageDescription
-	    - NSBluetoothAlwaysUsageDescription
-	  Do not add these speculatively — Apple review flags unused permission
-	  strings, and it invites questions in the Privacy Nutrition Label you
-	  don't need to answer. Add the matching key here (and re-run the
-	  privacy audit) only if a feature that needs it actually ships.
-	-->
-
-	<!-- App Tracking Transparency: NOT requested. The app only uses
-	     Firebase Analytics for in-app engagement metrics (see
-	     AnalyticsService / job_action_bar.dart "apply_job" event) — there
-	     is no advertising/attribution SDK (no Google Mobile Ads, Meta SDK,
-	     AppsFlyer, Adjust) and no IDFA usage anywhere in lib/. Firebase
-	     Analytics alone does not require an ATT prompt. Do not add
-	     NSUserTrackingUsageDescription unless an ads/attribution SDK is
-	     introduced. -->
-
-	<!-- LSApplicationQueriesSchemes: NOT needed. url_launcher in this app
-	     only opens https:// links (including https://wa.me/... for
-	     WhatsApp — Apple's Universal Link, no whatsapp:// scheme check),
-	     tel:, and mailto: — all of which are built-in iOS schemes that do
-	     not require a canOpenURL() allow-list entry. -->
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

@@ -103,11 +103,12 @@ class _BogorKerjaAppState extends ConsumerState<BogorKerjaApp> {
   }
 
   /// APNS di iOS bisa datang beberapa detik setelah permission.
-  /// Coba lagi di background; kalau tetap kosong, app tetap jalan
-  /// tanpa push (Simulator hampir selalu kasus ini).
+  /// Coba lagi di background; Simulator tidak pernah dapat token FCM.
   Future<void> _retryFcmRegistration() async {
-    for (var i = 0; i < 5; i++) {
-      await Future<void>.delayed(Duration(seconds: 2 + i));
+    for (var i = 0; i < 2; i++) {
+      if (i > 0) {
+        await Future<void>.delayed(const Duration(seconds: 5));
+      }
       if (!mounted) return;
 
       final token = await NotificationService.instance.getToken();

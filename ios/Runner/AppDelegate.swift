@@ -21,6 +21,12 @@ import UserNotifications
       UNUserNotificationCenter.current().delegate = self
     }
 
+    // Register immediately. Apple issues the APNs token independently of
+    // the alert permission dialog; waiting until Dart requestPermission
+    // completes is why getAPNSToken() often stays nil on first launch.
+    // (Simulator still will not receive a real APNs token.)
+    application.registerForRemoteNotifications()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -38,7 +44,20 @@ import UserNotifications
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     Messaging.messaging().apnsToken = deviceToken
+    #if DEBUG
+    print("APNs token received (\(deviceToken.count) bytes)")
+    #endif
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    #if DEBUG
+    print("APNs registration failed: \(error.localizedDescription)")
+    #endif
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
   // Lets a notification banner show while the app is in the foreground on

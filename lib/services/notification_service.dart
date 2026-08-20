@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -18,6 +19,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  bool _loggedSimulatorSkip = false;
+  bool _loggedFcmToken = false;
 
   static const _channel = AndroidNotificationChannel(
     'job_alerts', // id — HARUS sama dengan yang didaftarkan di AndroidManifest kalau override
@@ -42,6 +45,11 @@ class NotificationService {
     if (_initialized) return;
 
     await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    await _messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
@@ -51,7 +59,13 @@ class NotificationService {
     await _localNotifications.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        iOS: DarwinInitializationSettings(),
+        // Permission is already requested via firebase_messaging above.
+        // Asking again here races APNs registration on iOS.
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
       ),
       onDidReceiveNotificationResponse: (response) {
         final jobId = response.payload;
@@ -100,16 +114,26 @@ class NotificationService {
 
   /// Returns the FCM token, or null if it is not ready yet.
   ///
-  /// On iOS, [FirebaseMessaging.getToken] throws
-  /// `apns-token-not-set` until APNS has delivered a token (often never
-  /// on Simulator). We check APNS first and time out so callers never
-  /// hang the UI.
+  /// On iOS, [FirebaseMessaging.getToken] throws `apns-token-not-set`
+  /// until APNs has delivered a device token. The iOS Simulator never
+  /// gets a real APNs token, so this returns null there on purpose.
   Future<String?> getToken() async {
     try {
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final apnsToken = await _messaging
-            .getAPNSToken()
-            .timeout(const Duration(seconds: 2), onTimeout: () => null);
+        if (await _runningOnIosSimulator()) {
+          if (kDebugMode && !_loggedSimulatorSkip) {
+            _loggedSimulatorSkip = true;
+            debugPrint(
+              'FCM token is not available on the iOS Simulator. '
+              'APNs does not issue a device token there, so Firebase cannot '
+              'mint an FCM token. Run on a physical iPhone, or use an Android '
+              'emulator with Google Play to test FCM.',
+            );
+          }
+          return null;
+        }
+
+        final apnsToken = await _waitForApnsToken();
         if (apnsToken == null) {
           if (kDebugMode) {
             debugPrint('APNS token not ready yet; skipping FCM getToken');
@@ -118,13 +142,50 @@ class NotificationService {
         }
       }
 
-      return await _messaging
+      final token = await _messaging
           .getToken()
-          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+          .timeout(const Duration(seconds: 8), onTimeout: () => null);
+      if (kDebugMode && token != null && !_loggedFcmToken) {
+        _loggedFcmToken = true;
+        debugPrint('FCM token: $token');
+      }
+      return token;
     } catch (e) {
       if (kDebugMode) debugPrint('FCM getToken error: $e');
       return null;
     }
+  }
+
+  Future<bool> _runningOnIosSimulator() async {
+    try {
+      final info = await DeviceInfoPlugin().iosInfo;
+      return !info.isPhysicalDevice;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// APNs often arrives a few seconds after registerForRemoteNotifications.
+  Future<String?> _waitForApnsToken() async {
+    const delays = <Duration>[
+      Duration.zero,
+      Duration(seconds: 1),
+      Duration(seconds: 2),
+      Duration(seconds: 3),
+      Duration(seconds: 5),
+    ];
+    for (final delay in delays) {
+      if (delay != Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+      try {
+        final token = await _messaging
+            .getAPNSToken()
+            .timeout(const Duration(seconds: 2), onTimeout: () => null);
+        if (token != null) return token;
+      } catch (_) {}
+    }
+    return null;
   }
 
   Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
